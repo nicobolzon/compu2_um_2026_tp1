@@ -1,149 +1,47 @@
-# Computación II - 2026
+# Entrega TP1 - Monitor de Procesos y Threads
 
-## Universidad de Mendoza - Ingeniería en Informática
+Computacion II - Universidad de Mendoza - 2026
 
-### Docentes
-- Ing. Gabriel Quintero
-- Ing. Carlos Taffernaberry
+Repositorio de entrega del TP1. El trabajo implementa un monitor interactivo de procesos y threads usando Python, Docker y lectura directa de `/proc`.
 
-### Información del curso
-- **Código:** 2038
-- **Año:** 3º (Anual)
-- **Carga horaria:** 4 hs semanales (120 hs totales)
-- **Día de cursado:** Martes
+## Como ejecutarlo
 
----
+Desde la raiz del repositorio:
 
-## Estructura del repositorio
-
-```
-2026/
-├── README.md                    # Este archivo
-├── PLANIFICACION_2026.md       # Planificación detallada del curso
-│
-├── bloque_0_autonomo/          # Material para estudio autónomo
-│   ├── git/                    # Git y GitHub
-│   ├── argparse_getopt/        # Argumentos de línea de comandos
-│   ├── filesystem_linux/       # Filesystem, inodos, permisos
-│   └── python_avanzado/        # Context managers, decoradores, generadores
-│
-├── clase_01_docker_intro/      # Presentación + Docker básico
-├── clase_02_docker_aplicado/   # Volúmenes, redes, compose
-├── clase_03_procesos/          # fork, exec, wait
-├── ...                         # (28 clases en total)
-│
-├── trabajos_practicos/
-│   ├── TP1_monitoreo/         # Sistema de monitoreo concurrente
-│   └── TP2_tareas/            # Plataforma de tareas distribuidas
-│
-└── extra_manijas_globales/     # Material avanzado opcional
+```powershell
+docker compose up --build
 ```
 
----
+Para cerrar el monitor:
 
-## Estructura de cada unidad
-
-Cada clase/unidad sigue esta estructura:
-
-```
-clase_XX_tema/
-├── contenido.md           # Material teórico
-├── ejercicios/            # Ejercicios progresivos
-│   ├── basico/
-│   ├── intermedio/
-│   └── avanzado/
-├── extra_manijas.md       # Profundización opcional
-├── autoevaluacion.md      # Quiz de autoevaluación
-└── slides/                # Diapositivas (si aplica)
+```text
+q
 ```
 
----
+## Informe y codigo del TP
 
-## Cronograma resumido
+- Informe completo: [trabajos_practicos/TP1_monitoreo/README.md](trabajos_practicos/TP1_monitoreo/README.md)
+- Codigo principal: [trabajos_practicos/TP1_monitoreo/src](trabajos_practicos/TP1_monitoreo/src)
+- Consigna: [trabajos_practicos/TP1_monitoreo/consigna.md](trabajos_practicos/TP1_monitoreo/consigna.md)
+- Configuracion: [trabajos_practicos/TP1_monitoreo/config.json](trabajos_practicos/TP1_monitoreo/config.json)
 
-### Primer Cuatrimestre (13 clases)
-| Clase | Fecha | Tema |
-|-------|-------|------|
-| 1 | 17/03 | Docker Intro |
-| 2 | 31/03 | Docker Aplicado |
-| 3 | 07/04 | Procesos + Quiz Bloque 0 |
-| 4-6 | Abril | Pipes, Señales, Multiprocessing |
-| 7-9 | Mayo | Sincronización, Threading |
-| 10 | 26/05 | Redes + **Entrega TP1** |
-| 11-13 | Junio | Sockets TCP, Servidores |
+## Tests
 
-### Segundo Cuatrimestre (15 clases)
-| Clase | Fecha | Tema |
-|-------|-------|------|
-| 14-16 | Agosto | UDP, IPv6, I/O Multiplexing |
-| 17 | 25/08 | HTTP + FastAPI |
-| 18-21 | Sept | Asyncio + **Entrega TP2** |
-| 22-24 | Octubre | concurrent.futures, Celery |
-| 25-27 | Oct-Nov | Docker Compose, Integración |
-| 28 | 10/11 | Cierre |
-
----
-
-## Cómo usar este material
-
-### Para estudiantes
-
-1. **Antes de la primera clase:**
-   - Completar el Bloque 0 autónomo
-   - Instalar Docker y configurar entorno
-
-2. **Antes de cada clase:**
-   - Leer el contenido teórico
-   - Intentar los ejercicios básicos
-
-3. **Después de cada clase:**
-   - Completar ejercicios intermedios y avanzados
-   - Revisar extra manijas si te interesa profundizar
-   - Hacer la autoevaluación
-
-4. **Para los TPs:**
-   - Seguir las instrucciones en cada carpeta de TP
-   - Respetar las fechas de entrega
-
-### Para docentes
-
-Ver `PLANIFICACION_2026.md` para:
-- Detalle de cada clase
-- Criterios de evaluación
-- Material de evaluación docente (no distribuir)
-
----
-
-## Requisitos técnicos
-
-- Python 3.10+
-- Docker y Docker Compose
-- Git
-- Editor de código (VS Code recomendado)
-- Sistema Linux o WSL2
-
-### Instalación rápida (Ubuntu/Debian)
-
-```bash
-# Docker
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-
-# Python
-sudo apt install python3 python3-pip python3-venv
-
-# Herramientas adicionales
-sudo apt install git build-essential
+```powershell
+docker compose run --rm monitor python -m unittest discover -s tests
 ```
 
----
+Tambien se puede correr localmente desde la carpeta del TP:
 
-## Contacto
+```powershell
+cd trabajos_practicos/TP1_monitoreo
+python -m unittest discover -s tests
+```
 
-- **Consultas:** usar el canal de Discord/Slack del curso
-- **Issues:** reportar en el repositorio de GitHub
-- **Email:** solo para temas administrativos
+## Funcionalidades incluidas
 
----
-
-*Computación II - Ciclo 2026*
+- Recoleccion periodica de procesos desde `/proc`.
+- Analizadores separados para resumen, memoria, file descriptors, threads, senales, scheduling y sistema.
+- Interfaz TUI con vistas navegables, filtros, ordenamiento, pin de proceso e intervalo configurable.
+- Arquitectura concurrente con `multiprocessing`, `threading`, `Queue`, `Pipe`, `Manager`, `Value` y `Array`.
+- Ejecucion reproducible con Docker Compose desde Windows, Linux o macOS.

@@ -8,7 +8,7 @@
 
 ## ¿Cómo se usa?
 
-1. **Antes de empezar a trabajar**, abrí una conversación nueva con tu IA preferida (ChatGPT, Claude, Gemini, etc.).
+1. **Antes de empezar a trabajar**, abrí una conversación nueva con tu IA preferida.
 2. **Copiá y pegá el prompt completo** que está abajo como primer mensaje.
 3. A partir de ahí, dialogá con la IA mientras desarrollás el TP. Si la IA empieza a generar mucho código de corrido sin frenar a explicar, recordáselo con: *"recordá el prompt del tutor"*.
 
