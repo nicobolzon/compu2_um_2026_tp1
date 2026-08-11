@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "TP1: docker compose up",
+      "type": "shell",
+      "command": "docker compose up --build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "TP1: tests",
+      "type": "shell",
+      "command": "${command:python.interpreterPath}",
+      "args": ["-m", "unittest", "discover", "-s", "tests"],
+      "options": {
+        "cwd": "${workspaceFolder}/trabajos_practicos/TP1_monitoreo"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "TP1: snapshot local",
+      "type": "shell",
+      "command": "${command:python.interpreterPath}",
+      "args": ["run.py", "--once", "--seconds", "3"],
+      "options": {
+        "cwd": "${workspaceFolder}/trabajos_practicos/TP1_monitoreo"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

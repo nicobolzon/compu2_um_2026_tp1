@@ -1,0 +1,10 @@
+services:
+  monitor:
+    build: .
+    stdin_open: true
+    tty: true
+    environment:
+      PROC_ROOT: /proc
+    volumes:
+      - .:/app
+    pid: host

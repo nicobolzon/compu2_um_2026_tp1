@@ -1,0 +1,11 @@
+services:
+  monitor:
+    build:
+      context: ./trabajos_practicos/TP1_monitoreo
+    stdin_open: true
+    tty: true
+    environment:
+      PROC_ROOT: /proc
+    volumes:
+      - ./trabajos_practicos/TP1_monitoreo:/app
+    pid: host

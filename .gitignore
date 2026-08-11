@@ -1,6 +1,10 @@
 # === VSCode ===
 *.code-workspace
 .vscode/
+!.vscode/
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
 
 # === Clases no publicadas (ir descomentando a medida que se liberan) ===
 #clase_01_docker_intro/
@@ -35,8 +39,9 @@ clase_29_integracion_2/
 clase_30_cierre/
 
 # === Trabajos prácticos (liberar cuando corresponda) ===
-trabajos_practicos/
+trabajos_practicos/*
 !trabajos_practicos/TP1_monitoreo/
+!trabajos_practicos/TP1_monitoreo/**
 
 # === Material interno docente ===
 _old_reference/

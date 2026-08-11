@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "TP1: snapshot local",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/trabajos_practicos/TP1_monitoreo/run.py",
+      "args": ["--once", "--seconds", "3"],
+      "cwd": "${workspaceFolder}/trabajos_practicos/TP1_monitoreo",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "TP1: monitor TUI",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/trabajos_practicos/TP1_monitoreo/run.py",
+      "cwd": "${workspaceFolder}/trabajos_practicos/TP1_monitoreo",
+      "console": "integratedTerminal"
+    }
+  ]
+}
