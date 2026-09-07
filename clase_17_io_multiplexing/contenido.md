@@ -372,38 +372,18 @@ Ese caso es real y conviene manejarlo bien: el cliente puede haber dejado datos 
 
 Otro detalle: el `timeout` de `poll()` va en **milisegundos**, no en segundos como el de `select()`. Es una fuente clásica de errores por factor 1000.
 
-Los mismos 1100 sockets que hacían fallar a `select()` funcionan sin problema:
+### Lo que arregla y lo que no
+
+El límite de `FD_SETSIZE` desaparece. Los mismos 1100 sockets que hacían fallar a `select()` funcionan sin problema:
 
 ```
 select() con fd 1102: ValueError
 poll()   con fd 1102: OK
 ```
 
-Hay una diferencia incómoda en la API: `poll()` trabaja con **números** de descriptor, no con objetos socket. Como necesitás recuperar el socket a partir del número, hay que mantener un diccionario:
+**Pero el costo O(n) sigue igual.** `poll()` recibe la lista completa de descriptores registrados en cada llamada, la copia a espacio de kernel y la recorre entera. Con 10.000 conexiones de las cuales 3 tienen datos, el kernel revisa las 10.000 para encontrar 3, cada vez.
 
-```python
-conexiones = {}                       # fd -> socket
-
-conn, direccion = servidor.accept()
-conexiones[conn.fileno()] = conn
-poller.register(conn, select.POLLIN)
-
-# Y al recibir un evento:
-sock = conexiones[fd]
-```
-
-Las banderas principales:
-
-| Bandera | Significa |
-|---------|-----------|
-| `POLLIN` | Hay datos para leer (o conexión pendiente) |
-| `POLLOUT` | Se puede escribir sin bloquear |
-| `POLLHUP` | El otro extremo cerró |
-| `POLLERR` | Ocurrió un error |
-
-`POLLHUP` y `POLLERR` llegan aunque no los registres.
-
-**Lo que `poll()` no arregla es el O(n).** Sigue pasando y recorriendo la lista completa en cada llamada.
+Eso es lo que va a resolver `epoll`.
 
 ---
 
