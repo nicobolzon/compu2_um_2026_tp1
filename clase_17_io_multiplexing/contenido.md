@@ -152,18 +152,76 @@ Lo que falta es poder decirle al kernel: *"dormime hasta que alguno de estos ten
 
 ## select(): el original
 
+`select()` es una llamada al sistema que existe desde 4.2BSD (1983) —la misma versión que trajo los sockets, en la clase 13— y su idea es simple de enunciar: **le entregás una lista de descriptores y te devuelve cuáles están listos**, durmiendo mientras tanto si ninguno lo está.
+
+En Python vive en el módulo `select`, que expone las llamadas del sistema operativo casi sin envolverlas:
+
 ```python
 import select
-
-listos_lectura, listos_escritura, con_error = select.select(
-    lista_para_leer,        # sockets que me interesa leer
-    lista_para_escribir,    # sockets donde quiero escribir
-    lista_para_errores,     # sockets a vigilar por excepciones
-    timeout                 # segundos; None = esperar indefinidamente
-)
 ```
 
-`select()` **bloquea** hasta que al menos uno de los descriptores esté listo, y devuelve tres listas con los que efectivamente lo están. Mientras tanto, tu proceso duerme sin consumir CPU.
+### La firma
+
+```python
+listos_lectura, listos_escritura, con_error = select.select(rlist, wlist, xlist, timeout)
+```
+
+Recibe cuatro argumentos:
+
+| Argumento | Qué es |
+|-----------|--------|
+| `rlist` | Lista de descriptores donde te interesa **leer** |
+| `wlist` | Lista donde querés **escribir** |
+| `xlist` | Lista a vigilar por **condiciones excepcionales** (casi siempre `[]`) |
+| `timeout` | Segundos a esperar como máximo. `None` = indefinidamente; `0` = no esperar nada |
+
+Los tres primeros son listas, y pueden ir vacías. Si solo te interesa leer —el caso más común— pasás `select.select(mis_sockets, [], [])`.
+
+**Qué acepta en esas listas:** objetos socket, archivos, o directamente el número de descriptor. En rigor, cualquier objeto con un método `fileno()`. Nosotros vamos a pasar sockets.
+
+**Qué es `xlist`:** condiciones raras, no errores comunes. Un socket que falla se reporta como "listo para leer" y el error aparece al hacer `recv()`. En la práctica, `[]`.
+
+### Qué devuelve
+
+Una **tupla de tres listas**, en el mismo orden que los argumentos: los que están listos para leer, los listos para escribir, y los que tienen una condición excepcional.
+
+```python
+>>> select.select([sock_a, sock_c], [], [], 0)
+([], [], [])                                    # nadie listo todavía
+```
+
+```python
+>>> # después de que llegaran datos a sock_a
+>>> select.select([sock_a, sock_c], [], [], 0)
+([<socket.socket fd=3, ...>], [], [])           # sock_a tiene algo
+```
+
+Un detalle que hace cómodo el uso: **las listas devueltas contienen los mismos objetos que pasaste**, no copias ni descriptores sueltos. Por eso podés comparar con `is` y usarlos directamente:
+
+```python
+listos, _, _ = select.select(vigilados, [], [])
+for sock in listos:
+    if sock is servidor:          # comparación por identidad
+        ...
+```
+
+### Qué hace mientras tanto
+
+Acá está lo importante, y es lo que lo distingue del bucle de la sección anterior: **`select()` bloquea**. Tu proceso queda dormido, sin consumir CPU, hasta que ocurra alguna de estas tres cosas:
+
+1. Al menos un descriptor queda listo
+2. Vence el `timeout`
+3. Llega una señal
+
+Si vence el timeout sin novedades, devuelve las tres listas vacías. Ese caso es útil: permite hacer tareas periódicas —limpiar conexiones muertas, actualizar estadísticas— entre espera y espera.
+
+```python
+listos, _, _ = select.select(vigilados, [], [], 1.0)
+if not listos:
+    print('un segundo sin actividad')     # el timeout venció
+```
+
+> **Sobre la escritura:** un socket casi siempre está listo para escribir, porque el buffer del kernel tiene lugar. Si ponés tus sockets en `wlist` permanentemente, `select()` va a devolver enseguida y el bucle va a girar sin parar. La regla es registrar interés en escritura **solo cuando tenés datos pendientes** de enviar, algo que vamos a ver más adelante.
 
 Un servidor eco completo, con un solo hilo:
 
@@ -243,19 +301,74 @@ Con 10 conexiones no importa. Con 10.000 de las cuales 3 tienen datos, estás re
 
 ## poll(): sin el límite de 1024
 
-`poll()` llegó en System V y arregla el límite de tamaño usando un array en vez de un mapa de bits:
+`poll()` apareció en System V como reemplazo de `select()`, y resuelve el límite de tamaño usando un array de descriptores en vez de un mapa de bits de tamaño fijo.
+
+El cambio de API es más grande de lo que parece: en vez de pasar las listas en cada llamada, se crea un **objeto poller** al que se le registran los descriptores una vez.
 
 ```python
 import select
 
-poller = select.poll()
-poller.register(servidor, select.POLLIN)      # POLLIN = listo para leer
-
-while True:
-    eventos = poller.poll()          # devuelve [(fd, mascara), ...]
-    for fd, mascara in eventos:
-        ...
+poller = select.poll()                        # crear el objeto
+poller.register(servidor, select.POLLIN)      # registrar qué me interesa
 ```
+
+`register()` recibe el descriptor y una **máscara de eventos**: qué te interesa saber de él.
+
+| Bandera | Significa |
+|---------|-----------|
+| `POLLIN` | Hay datos para leer, o una conexión pendiente |
+| `POLLOUT` | Se puede escribir sin bloquear |
+| `POLLHUP` | El otro extremo cerró |
+| `POLLERR` | Ocurrió un error |
+
+`POLLHUP` y `POLLERR` llegan siempre, los registres o no.
+
+### Qué devuelve poll()
+
+```python
+eventos = poller.poll(timeout_en_milisegundos)
+```
+
+Devuelve una **lista de tuplas `(fd, máscara)`**, una por cada descriptor con novedades:
+
+```python
+>>> poller.poll(0)
+[]                    # nadie listo
+>>> # después de que llegaran datos
+>>> poller.poll(0)
+[(3, 1)]              # el descriptor 3, con máscara 1 (POLLIN)
+```
+
+Hay dos cosas ahí que conviene mirar de cerca.
+
+**El primer elemento es un entero, no el socket.** A diferencia de `select()`, que te devolvía los mismos objetos que le pasaste, `poll()` trabaja con números de descriptor. Como necesitás recuperar el socket para hacer `recv()`, hay que mantener un diccionario:
+
+```python
+conexiones = {}                          # fd -> socket
+
+conn, direccion = servidor.accept()
+conexiones[conn.fileno()] = conn         # guardar la correspondencia
+poller.register(conn, select.POLLIN)
+
+# Y al recibir un evento:
+for fd, mascara in poller.poll():
+    sock = conexiones[fd]                # recuperar el socket
+```
+
+**El segundo es una máscara de bits**, no un solo evento. Pueden venir varios combinados con OR, y hay que preguntarlos con `&`:
+
+```python
+>>> # el cliente mandó datos y después cerró
+>>> poller.poll(0)
+[(3, 17)]                    # 17 = 0b10001 = POLLIN | POLLHUP
+
+>>> mascara & select.POLLIN     # ¿hay datos?      -> True
+>>> mascara & select.POLLHUP    # ¿además cerró?   -> True
+```
+
+Ese caso es real y conviene manejarlo bien: el cliente puede haber dejado datos sin leer **y** haber cerrado la conexión. Si solo mirás `POLLHUP` y cerrás, perdés lo último que mandó.
+
+Otro detalle: el `timeout` de `poll()` va en **milisegundos**, no en segundos como el de `select()`. Es una fuente clásica de errores por factor 1000.
 
 Los mismos 1100 sockets que hacían fallar a `select()` funcionan sin problema:
 
@@ -294,19 +407,31 @@ Las banderas principales:
 
 ## epoll(): el que resolvió C10K
 
-`epoll` es específico de Linux (2002) y cambia el modelo: en vez de pasar la lista completa cada vez, **el kernel mantiene el conjunto** y vos solo lo modificás cuando algo cambia.
+`epoll` es específico de Linux (2002) y cambia el modelo de fondo: en vez de pasarle la lista completa en cada llamada, **el kernel mantiene el conjunto** y vos solo lo modificás cuando algo cambia.
+
+La API se parece a la de `poll()` —un objeto donde registrás— pero con esa diferencia adentro:
 
 ```python
 import select
 
-epoll = select.epoll()
-epoll.register(servidor.fileno(), select.EPOLLIN)
+epoll = select.epoll()                              # crear
+epoll.register(servidor.fileno(), select.EPOLLIN)   # registrar (una vez)
 
 while True:
-    eventos = epoll.poll()           # devuelve SOLO los listos
-    for fd, evento in eventos:
+    eventos = epoll.poll(timeout_en_segundos)
+    for fd, mascara in eventos:
         ...
+
+epoll.close()                                       # liberar (es un fd real)
 ```
+
+Las banderas son las mismas de `poll()` con otro prefijo: `EPOLLIN`, `EPOLLOUT`, `EPOLLHUP`, `EPOLLERR`. Y el valor numérico coincide —`POLLIN` y `EPOLLIN` valen 1— porque debajo son las mismas constantes del kernel.
+
+El retorno también es igual: una lista de tuplas `(fd, máscara)`, con el descriptor como entero, así que vale el mismo diccionario `fd -> socket` que en `poll()`.
+
+> **Un detalle que muerde:** el `timeout` de `epoll.poll()` va en **segundos** (acepta decimales), mientras que el de `poll.poll()` va en **milisegundos**. La misma espera de 300 ms se escribe `epoll.poll(0.3)` y `poller.poll(300)`. Confundirlos da esperas mil veces más largas o más cortas de lo que pensabas.
+
+Dos cosas más que lo diferencian: `epoll` **es un descriptor de archivo en sí mismo** —por eso hay que cerrarlo, y por eso se lo puede anidar dentro de otro selector—, y acepta tanto el número de descriptor como el objeto socket en `register()`.
 
 La diferencia de fondo es que `epoll.poll()` devuelve únicamente los descriptores listos. Con 10.000 conexiones de las cuales 3 tienen datos, devuelve 3 elementos —no 10.000 que hay que filtrar.
 
@@ -454,14 +579,18 @@ En la práctica, hoy nadie escribe un servidor nuevo con `selectors` a mano: se 
 
 1. **El problema es bloquearse en una sola conexión**: multiplexing pregunta por muchas a la vez.
 2. **`select()` bloquea hasta que alguno esté listo**: sin busy-waiting, sin consumir CPU.
-3. **Listo significa "no va a bloquear"**, no "hay muchos datos": el `recv()` posterior sigue necesitando todos los cuidados de la clase 13.
-4. **El límite de `select()` es el número del fd, no la cantidad**: un solo fd mayor a 1023 rompe la llamada.
-5. **`poll()` saca el límite pero sigue siendo O(n)**: pasa y recorre la lista completa cada vez.
-6. **`epoll` cambia el modelo**: el kernel mantiene el conjunto y devuelve solo los listos. Ese salto resolvió C10K.
-7. **Usá `selectors`, no `epoll` directo**: elige la mejor implementación de cada sistema.
-8. **`unregister()` antes de `close()`**: un fd cerrado y aún registrado deja el selector en estado indefinido.
-9. **Registrar `EVENT_WRITE` permanente hace girar el bucle**: activarlo solo con datos pendientes.
-10. **Un solo hilo: nada lento puede correr en el bucle**: es la misma regla que va a valer en asyncio.
+3. **Devuelve una tupla de tres listas** (lectura, escritura, excepciones) con los mismos objetos que le pasaste.
+4. **Listo significa "no va a bloquear"**, no "hay muchos datos": el `recv()` posterior sigue necesitando todos los cuidados de la clase 13.
+5. **El límite de `select()` es el número del fd, no la cantidad**: un solo fd mayor a 1023 rompe la llamada.
+6. **`poll()` saca el límite pero sigue siendo O(n)**: pasa y recorre la lista completa cada vez.
+7. **`poll()` y `epoll()` devuelven `(fd, máscara)`**: un entero, no el socket, así que hace falta un diccionario `fd -> socket`.
+8. **La máscara puede traer varios eventos combinados con OR**: `POLLIN|POLLHUP` significa "hay datos y además cerró"; preguntá con `&`.
+9. **Ojo con las unidades del timeout**: `select` y `epoll` usan segundos; `poll` usa milisegundos.
+10. **`epoll` cambia el modelo**: el kernel mantiene el conjunto y devuelve solo los listos. Ese salto resolvió C10K.
+11. **Usá `selectors`, no `epoll` directo**: elige la mejor implementación de cada sistema.
+12. **`unregister()` antes de `close()`**: un fd cerrado y aún registrado deja el selector en estado indefinido.
+13. **Registrar `EVENT_WRITE` permanente hace girar el bucle**: activarlo solo con datos pendientes.
+14. **Un solo hilo: nada lento puede correr en el bucle**: es la misma regla que va a valer en asyncio.
 
 ---
 
