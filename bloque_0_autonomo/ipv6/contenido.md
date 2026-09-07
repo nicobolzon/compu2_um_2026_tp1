@@ -152,7 +152,44 @@ Y acá aparece algo que ya vieron sin explicación. En el ejercicio 7 de la clas
 #  dirección                                puerto  flowinfo  scope_id
 ```
 
-Ahí está la explicación: los dos extra son `flowinfo` (casi siempre 0, pensado para QoS y poco usado) y `scope_id` (el índice de la interfaz, distinto de cero justamente en las link-local).
+Ahí está la explicación: la tupla de IPv6 tiene **cuatro** campos en vez de dos. Los dos primeros son los de siempre —dirección y puerto—; veamos los otros dos.
+
+### `flowinfo`: la etiqueta de flujo
+
+El tercer campo corresponde al **flow label**, un campo de 20 bits del encabezado IPv6 que no existía en IPv4. La idea era marcar todos los paquetes de una misma conversación con la misma etiqueta, para que los routers pudieran darles trato uniforme sin tener que mirar los puertos —que están más arriba, en la capa de transporte, y que además quedan cifrados si hay IPsec.
+
+Eso servía para lo que se llama **QoS** (*Quality of Service*, calidad de servicio): el conjunto de mecanismos con los que una red prioriza cierto tráfico sobre otro. La idea es que no todos los paquetes valen lo mismo — los de una videollamada necesitan llegar rápido y a tiempo, mientras que los de una descarga pueden esperar sin que nadie lo note. Un router con QoS reconoce esas diferencias y atiende primero lo urgente.
+
+En la práctica el flow label casi no se usa: la mayoría de las implementaciones lo dejan en 0, y los mecanismos de QoS que sí se usan en Internet funcionan con otros campos. **Para lo que vamos a programar, siempre va 0.**
+
+### `scope_id`: por cuál interfaz
+
+El cuarto campo es el que sí importa, y resuelve el problema de las link-local que vimos recién.
+
+Como toda interfaz tiene una dirección `fe80::`, decir "conectate a `fe80::1`" es ambiguo: ¿por el wifi, por el cable, por la interfaz virtual de Docker? El `scope_id` responde eso con el **índice numérico** de la interfaz.
+
+```python
+import socket
+socket.if_nametoindex('lo')          # 1
+socket.if_nametoindex('wlp63s0')     # 2
+socket.if_indextoname(2)             # 'wlp63s0'
+```
+
+Ese número es el mismo que ves al principio de cada línea de `ip link show`. Y es exactamente la información que va después del `%` en la notación con texto:
+
+```
+fe80::1%wlp63s0     ==     ('fe80::1', puerto, 0, 2)
+```
+
+Las dos formas dicen lo mismo; una es para humanos y la otra para la API.
+
+**Cuándo vale cero:** en direcciones globales y en loopback, porque no son ambiguas —hay una sola ruta posible. Solo las link-local necesitan un `scope_id` distinto de cero.
+
+```python
+s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+s.connect(('::1', 9))
+print(s.getsockname())        # ('::1', 37764, 0, 0)  <- los dos últimos en 0
+```
 
 **Consecuencia práctica:** si tu código hace `host, puerto = sock.getsockname()`, se rompe con IPv6. Y es un bug que no aparece en desarrollo si probás solo con IPv4.
 
