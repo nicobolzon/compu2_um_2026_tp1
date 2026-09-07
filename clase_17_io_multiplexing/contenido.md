@@ -295,7 +295,9 @@ Es un error confuso de diagnosticar: tu servidor anda perfecto en desarrollo y e
 
 Cada llamada a `select()` recibe la lista completa de descriptores, la copia a espacio de kernel, la recorre entera, y devuelve el resultado. Tu código después **también** recorre todo para ver quién quedó listo.
 
-Con 10 conexiones no importa. Con 10.000 de las cuales 3 tienen datos, estás recorriendo 10.000 elementos para encontrar 3, en cada vuelta del bucle. Ese es el corazón del problema C10K.
+Con 10 conexiones no importa. Con 10.000 de las cuales 3 tienen datos, estás recorriendo 10.000 elementos para encontrar 3, en cada vuelta del bucle. Ese es el corazón del problema **C10K**.
+
+> **C10K** viene de *connection 10.000* —diez mil conexiones simultáneas en una sola máquina—, con la misma abreviatura que Y2K. El nombre lo puso Dan Kegel en un texto de 1999 donde señalaba que el hardware de la época ya daba para eso, pero el software no: con un thread o un proceso por cliente, diez mil clientes son diez mil threads. Lo vimos al cerrar la clase 14; esta clase es la respuesta.
 
 ---
 
@@ -405,7 +407,7 @@ Las banderas principales:
 
 ---
 
-## epoll(): el que resolvió C10K
+## epoll(): el que resolvió las diez mil conexiones
 
 `epoll` es específico de Linux (2002) y cambia el modelo de fondo: en vez de pasarle la lista completa en cada llamada, **el kernel mantiene el conjunto** y vos solo lo modificás cuando algo cambia.
 
