@@ -94,7 +94,11 @@ for familia, tipo, proto, _, direccion in socket.getaddrinfo(
         s.close()                # probar la siguiente
 ```
 
-`getaddrinfo()` devuelve las dos familias ordenadas por preferencia del sistema, y hay que **probarlas en orden**: tener una dirección IPv6 no garantiza que la ruta funcione. Es la situación de muchas conexiones en Argentina —el ISP da IPv6 pero sin tránsito— y un cliente que no reintenta con IPv4 simplemente falla.
+`getaddrinfo()` devuelve las dos familias ordenadas por preferencia del sistema, y hay que **probarlas en orden**: tener una dirección IPv6 no garantiza que la ruta funcione.
+
+Es la situación de muchas conexiones en Argentina, y vale la pena entender por qué. Internet no es una red sino miles de redes independientes interconectadas; ninguna alcanza sola a todas las demás, así que cada una le paga a otra más grande para que le lleve el tráfico hacia el resto. Ese servicio se llama **tránsito**. Un ISP (*Internet Service Provider*, tu proveedor de conexión) puede asignarte una dirección IPv6 y tener IPv6 funcionando dentro de su propia red, pero si no contrató tránsito IPv6 hacia afuera, tus paquetes no salen: tenés dirección, pero es una calle sin salida.
+
+Por eso un cliente que se queda con la primera dirección que le dan y no reintenta con IPv4 simplemente falla.
 
 Como cliente, `socket.create_connection()` ya hace todo esto por vos. Es una razón más para usarlo.
 

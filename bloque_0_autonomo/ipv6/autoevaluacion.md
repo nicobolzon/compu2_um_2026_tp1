@@ -241,7 +241,7 @@ d) El enrutamiento
 a) La dirección es inválida
 b) IPv6 está deshabilitado en el kernel
 c) Falta configurar el DNS
-d) Tenés dirección pero no ruta: el ISP no provee tránsito IPv6
+d) Tenés dirección pero no ruta: el ISP no contrató tránsito IPv6 (el servicio que le compra a un operador mayor para llegar al resto de Internet)
 
 ---
 
