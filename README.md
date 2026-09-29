@@ -1,10 +1,12 @@
-# Entrega TP1 - Monitor de Procesos y Threads
+# Computacion II - Trabajos practicos
 
-Computacion II - Universidad de Mendoza - 2026
+Universidad de Mendoza - 2026
 
-Repositorio de entrega del TP1. El trabajo implementa un monitor interactivo de procesos y threads usando Python, Docker y lectura directa de `/proc`.
+Este repositorio contiene el material de clase de la catedra y los trabajos practicos de la cursada.
 
-## Como ejecutarlo
+## TP1 - Monitor de Procesos y Threads
+
+Trabajo aprobado. Implementa un monitor interactivo de procesos y threads con Python, Docker y lectura directa de `/proc`.
 
 Desde la raiz del repositorio:
 
@@ -12,36 +14,16 @@ Desde la raiz del repositorio:
 docker compose up --build
 ```
 
-Para cerrar el monitor:
-
-```text
-q
-```
-
-## Informe y codigo del TP
-
-- Informe completo: [trabajos_practicos/TP1_monitoreo/README.md](trabajos_practicos/TP1_monitoreo/README.md)
-- Codigo principal: [trabajos_practicos/TP1_monitoreo/src](trabajos_practicos/TP1_monitoreo/src)
-- Consigna: [trabajos_practicos/TP1_monitoreo/consigna.md](trabajos_practicos/TP1_monitoreo/consigna.md)
-- Configuracion: [trabajos_practicos/TP1_monitoreo/config.json](trabajos_practicos/TP1_monitoreo/config.json)
-
-## Tests
+Presionar `q` para cerrar el monitor. Para ejecutar sus pruebas:
 
 ```powershell
 docker compose run --rm monitor python -m unittest discover -s tests
 ```
 
-Tambien se puede correr localmente desde la carpeta del TP:
+El informe, la consigna y las instrucciones completas estan en [TP1_monitoreo](trabajos_practicos/TP1_monitoreo/README.md).
 
-```powershell
-cd trabajos_practicos/TP1_monitoreo
-python -m unittest discover -s tests
-```
+## TP2 - Tareas
 
-## Funcionalidades incluidas
+Primer avance basado en los ejercicios de las clases 19 y 20. La consigna oficial aun no esta publicada. La API permite registrar, listar, consultar y borrar tareas, pero todavia no las ejecuta.
 
-- Recoleccion periodica de procesos desde `/proc`.
-- Analizadores separados para resumen, memoria, file descriptors, threads, senales, scheduling y sistema.
-- Interfaz TUI con vistas navegables, filtros, ordenamiento, pin de proceso e intervalo configurable.
-- Arquitectura concurrente con `multiprocessing`, `threading`, `Queue`, `Pipe`, `Manager`, `Value` y `Array`.
-- Ejecucion reproducible con Docker Compose desde Windows, Linux o macOS.
+Para instalarlo, ejecutarlo y probarlo, ver [TP2_tareas](trabajos_practicos/TP2_tareas/README.md). La implementacion se ajustara cuando la catedra publique los requisitos definitivos.
