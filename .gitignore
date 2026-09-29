@@ -37,6 +37,8 @@ clase_25_compose_avanzado/
 trabajos_practicos/*
 !trabajos_practicos/TP1_monitoreo/
 !trabajos_practicos/TP1_monitoreo/**
+!trabajos_practicos/TP2_tareas/
+!trabajos_practicos/TP2_tareas/**
 
 # === Material interno docente ===
 _old_reference/
